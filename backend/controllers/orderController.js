@@ -1,5 +1,6 @@
 import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
+import { sendOrderConfirmation, notifyAdminNewOrder, notifyOrderDelivered } from "../utils/notificationService.js";
 
 // Utility Function
 function calcPrices(orderItems) {
@@ -72,6 +73,13 @@ const createOrder = async (req, res) => {
     });
 
     const createdOrder = await order.save();
+
+    // Send notification to the customer (Order Confirmation)
+    sendOrderConfirmation(req.user.email, createdOrder);
+
+    // Notify Admin about the new order
+    notifyAdminNewOrder('admin@example.com', createdOrder); // Replace with actual admin email
+
     res.status(201).json(createdOrder);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -172,6 +180,10 @@ const markOrderAsPaid = async (req, res) => {
       };
 
       const updateOrder = await order.save();
+
+      // Send notification to the customer (Payment Confirmation)
+      sendOrderConfirmation(order.user.email, updateOrder);
+
       res.status(200).json(updateOrder);
     } else {
       res.status(404);
@@ -191,6 +203,10 @@ const markOrderAsDelivered = async (req, res) => {
       order.deliveredAt = Date.now();
 
       const updatedOrder = await order.save();
+
+      // Send notification to the customer (Order Delivered)
+      notifyOrderDelivered(order.user.email, updatedOrder);
+
       res.json(updatedOrder);
     } else {
       res.status(404);
